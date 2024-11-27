@@ -1,9 +1,25 @@
 
 services:
   postgres:
-    image: 17.2-alpine3.20
+    image: postgres:17.2-alpine3.20
     container_name: postgres_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+  
+  media_api:
+    build: .
+    container_name: media_api
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/media:/media
+    depends_on:
+      - postgres
