@@ -2,12 +2,11 @@ import requests
 import os
 
 BASE_URL = "http://localhost:8000/files/"
-TEST_FILE = "test_image.jpg"
 LOCAL_STORAGE_PATH = "./data/media"
 
 
-def upload_file():
-    with open(TEST_FILE, "rb") as file:
+def upload_file(test_file):
+    with open(test_file, "rb") as file:
         response = requests.post(BASE_URL, files={"file": file})
         if response.status_code == 200:
             print("Файл успешно загружен.")
@@ -33,24 +32,24 @@ def verify_local_file(uid, extension):
 
 def run_tests():
     print("Запуск тестирования...")
-    
-    # Проверка наличия тестового файла
-    assert os.path.exists(TEST_FILE), f"Тестовый файл {TEST_FILE} не найден!"
-    
-    # Загружаем файл
-    response = upload_file()
-    
-    # Проверяем статус-код
-    assert response.status_code == 200, "Ответ от сервера не успешный."
-    
-    # Проверка метаданных
-    verify_metadata(response)
-    
-    # Проверка локального файла
-    uid = response.json()["uid"]
-    extension = response.json()["extension"]
-    verify_local_file(uid, extension)
-    
+    for test_file in [file for file in os.listdir() if file.startswith("test_file")]:
+        # Проверка наличия тестового файла
+        assert os.path.exists(test_file), f"Тестовый файл {test_file} не найден!"
+        
+        # Загружаем файл
+        response = upload_file(test_file)
+        
+        # Проверяем статус-код
+        assert response.status_code == 200, "Ответ от сервера не успешный."
+        
+        # Проверка метаданных
+        verify_metadata(response)
+        
+        # Проверка локального файла
+        uid = response.json()["uid"]
+        extension = response.json()["extension"]
+        verify_local_file(uid, extension)
+        
     print("Все тесты пройдены успешно!")
 
 
