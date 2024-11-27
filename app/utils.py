@@ -1,4 +1,6 @@
 import os
+import mimetypes
+
 
 def extract_file_metadata(file) -> dict:
     filename = file.filename
@@ -8,5 +10,10 @@ def extract_file_metadata(file) -> dict:
         "original_name": filename,
         "size": size,
         "extension": extension.lower(),
-        "format": None #TODO: add format
+        "format": get_file_mime_type(filename)
     }
+
+
+def get_file_mime_type(filepath):
+    mime_type, _ = mimetypes.guess_type(filepath)
+    return mime_type
