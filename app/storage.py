@@ -8,6 +8,7 @@ os.makedirs(STORAGE_PATH, exist_ok=True)
 
 def save_file_locally(file, filename: str) -> str:
     file_path = os.path.join(STORAGE_PATH, filename)
+    file.file.seek(0)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     return file_path
