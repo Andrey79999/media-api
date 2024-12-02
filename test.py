@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 BASE_URL = "http://localhost:8000/files/"
 LOCAL_STORAGE_PATH = "./data/media"
+TEST_DOWNLOAD_PATH = "./data/test_downloads"
 MAX_WORKERS = 5  # Максимальное число параллельных загрузок
 
 
@@ -53,6 +54,41 @@ def verify_local_file(uid, extension, test_file):
         print(f"[ERROR] Локальный файл {test_file} отсутствует: {e}")
 
 
+def verify_downloaded_file(original_file, downloaded_file):
+    """
+    Сравнивает оригинальный и скачанный файл по размеру.
+    """
+    try:
+        assert os.path.exists(downloaded_file), "Скачанный файл отсутствует!"
+        assert os.path.getsize(original_file) == os.path.getsize(downloaded_file), \
+            "Размеры оригинального и скачанного файла не совпадают!"
+        print(f"[VERIFY] Скачанный файл {downloaded_file} успешно проверен.")
+    except AssertionError as e:
+        print(f"[ERROR] Ошибка при проверке скачанного файла: {e}")
+
+
+def download_file(uid, test_file):
+    """
+    Загружает файл с сервера по UID.
+    """
+    try:
+        download_path = os.path.join(TEST_DOWNLOAD_PATH, f"{uid}_downloaded")
+        response = requests.get(f"{BASE_URL}{uid}", stream=True)
+        if response.status_code == 200:
+            os.makedirs(TEST_DOWNLOAD_PATH, exist_ok=True)
+            with open(download_path, "wb") as file:
+                for chunk in response.iter_content(1024):
+                    file.write(chunk)
+            print(f"[SUCCESS] Файл {test_file} успешно скачан: {download_path}")
+            return download_path
+        else:
+            print(f"[ERROR] Ошибка скачивания {test_file}: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"[EXCEPTION] Ошибка при скачивании {test_file}: {e}")
+        return None
+
+
 def process_file(test_file):
     """
     Обрабатывает загрузку и верификацию для одного файла.
@@ -63,6 +99,10 @@ def process_file(test_file):
         uid = response.json()["uid"]
         extension = response.json()["extension"]
         verify_local_file(uid, extension, test_file)
+
+        downloaded_file = download_file(uid, test_file)
+        if downloaded_file:
+            verify_downloaded_file(test_file, downloaded_file)
 
 
 def run_tests():
