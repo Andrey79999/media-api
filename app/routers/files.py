@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -7,6 +9,7 @@ from storage import save_file_locally, generate_uid, send_to_cloud
 from utils import extract_file_metadata
 
 router = APIRouter(prefix="/files", tags=["Files"])
+
 
 @router.post("/", response_model=FileMetadataResponse)
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -19,6 +22,6 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     db.commit()
     db.refresh(db_file)
 
-    await send_to_cloud(local_file_path)
+    await send_to_cloud(filename=local_file_path, bucket=os.getenv('S3BUCKET'))
 
     return db_file
