@@ -1,13 +1,13 @@
 import os
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session
+from aiofiles import open as aio_open
 from database import get_db
 from models import FileMetadata
 from schemas import FileMetadataResponse
 from storage import generate_uid, send_to_cloud, fetch_from_cloud
 from utils import get_file_mime_type
 from logger import logger
-from aiofiles import open as aio_open
 
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTasks
@@ -44,6 +44,9 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
         await send_to_cloud(filename=local_file_path, bucket=os.getenv('S3BUCKET'))
         logger.info(f"Finish uploading file {file.filename}")
         return db_file
+    except HTTPException as e:
+        logger.warning(f"HTTP Exception: {e.detail}")
+        raise
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         raise HTTPException(status_code=500, detail="Error uploading file")
