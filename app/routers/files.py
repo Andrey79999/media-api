@@ -4,18 +4,21 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import FileMetadata
 from schemas import FileMetadataResponse
-from storage import save_file_locally, generate_uid, send_to_cloud
+from storage import generate_uid, send_to_cloud, fetch_from_cloud
 from utils import get_file_mime_type
 from logger import logger
 from aiofiles import open as aio_open
 
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTasks
+from starlette.status import HTTP_404_NOT_FOUND
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
 
 @router.post("/", response_model=FileMetadataResponse)
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    logger.info("Start uploading file")
+    logger.info(f"Start uploading file {file.filename}")
     try:
         uid = generate_uid()
         extension = os.path.splitext(file.filename)[1]
@@ -39,8 +42,41 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
         db.refresh(db_file)
 
         await send_to_cloud(filename=local_file_path, bucket=os.getenv('S3BUCKET'))
-        logger.info("Finish uploading file")
+        logger.info(f"Finish uploading file {file.filename}")
         return db_file
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         raise HTTPException(status_code=500, detail="Error uploading file")
+
+
+@router.get("/{uid}", response_class=FileResponse)
+async def get_file(
+        uid: str,
+        db: Session = Depends(get_db),
+        background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """
+    Получить файл по UID.
+    Сначала ищет локально, если не найден, то скачивает из S3.
+    """
+    file_metadata = db.query(FileMetadata).filter(FileMetadata.uid == uid).first()
+    if not file_metadata:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="File not found")
+
+    local_file_path = f"/media/{uid}{file_metadata.extension}"
+
+    if os.path.exists(local_file_path):
+        return FileResponse(local_file_path, media_type=file_metadata.format, filename=file_metadata.original_name)
+
+    # Если файла нет, пытаемся скачать из S3
+    try:
+        logger.info(f"File not found locally, fetching from S3: {uid}")
+        await fetch_from_cloud(
+            bucket=os.getenv('S3BUCKET'),
+            filename=f"{uid}{file_metadata.extension}",
+            destination=local_file_path
+        )
+        return FileResponse(local_file_path, media_type=file_metadata.format, filename=file_metadata.original_name)
+    except Exception as e:
+        logger.error(f"Error fetching file from S3: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching file from storage")
