@@ -25,5 +25,6 @@ services:
       S3BUCKET: ${S3BUCKET}
     volumes:
       - ./data/media:/media
+      - ./data/logs:/app/logs
     depends_on:
       - postgres
