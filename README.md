@@ -11,7 +11,6 @@ A FastAPI-based service for managing media files with S3 integration.
 
 ### Prerequisites
 - Docker and Docker Compose.
-- Python 3.11.
 
 ### Environment Variables
 Create a `.env` file based on `.env.example` and provide values for:
@@ -44,3 +43,28 @@ The `clear_disk.sh` script is used to clean old files from the `media` directory
    ```bash
    0 * * * * /full/path/to/clear_disk.sh
    ```
+
+## API Usage
+
+### Upload File
+- **Endpoint:** `POST /files/`
+- **Description:** Uploads a file to the server and stores metadata in the database.
+- **Request Body:**
+  - File: Binary file data.
+- **Response:**
+  ```json
+  {
+    "uid": "string",
+    "original_name": "string",
+    "extension": "string",
+    "size": integer,
+    "format": "string"
+  }
+  
+### Retrieve File
+- **Endpoint:** `GET /files/{uid}`
+- **Description:** Retrieves a file by its UID, either from local storage or S3.
+- **Path Parameter:**
+   - `uid` (string): The unique identifier of the file.
+- **Response:**
+  - File binary with appropriate Content-Type headers.
