@@ -5,7 +5,6 @@ A FastAPI-based service for managing media files with S3 integration.
 ## Features
 - Upload files to S3 and local storage.
 - Retrieve files from local storage or S3.
-- Database integration with PostgreSQL.
 
 ## Setup
 
